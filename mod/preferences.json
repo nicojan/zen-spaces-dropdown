@@ -1,0 +1,30 @@
+[
+  {
+    "property": "mod.spaces-dropdown.sort",
+    "label": "Sort spaces by",
+    "type": "dropdown",
+    "defaultValue": "manual",
+    "options": [
+      { "label": "Manual (drag to reorder)", "value": "manual" },
+      { "label": "Alphabetical (A → Z)", "value": "alphabetical" }
+    ]
+  },
+  {
+    "property": "mod.spaces-dropdown.show-drag-handles",
+    "label": "Show drag handles on hover",
+    "type": "checkbox",
+    "defaultValue": true
+  },
+  {
+    "property": "mod.spaces-dropdown.compact",
+    "label": "Compact rows",
+    "type": "checkbox",
+    "defaultValue": false
+  },
+  {
+    "property": "mod.spaces-dropdown.always-open",
+    "label": "Always show all spaces (don't collapse to a dropdown)",
+    "type": "checkbox",
+    "defaultValue": false
+  }
+]

@@ -1,0 +1,15 @@
+{
+  "id": "1b796bb6-e828-4083-82e6-b450d15379b9",
+  "name": "Spaces Dropdown",
+  "description": "Turns the workspace switcher at the bottom of the Zen sidebar into a polished upward-opening dropdown. Workspace #1 sits closest to the trigger button; higher numbers stack upward. Includes hover drag-handles, a manual/alphabetical sort toggle, and an optional compact row mode.",
+  "homepage": "https://github.com/nicojan/zen-spaces-dropdown",
+  "style": "https://raw.githubusercontent.com/nicojan/zen-spaces-dropdown/main/mod/chrome.css",
+  "readme": "https://raw.githubusercontent.com/nicojan/zen-spaces-dropdown/main/mod/readme.md",
+  "image": "https://raw.githubusercontent.com/nicojan/zen-spaces-dropdown/main/mod/image.png",
+  "preferences": "https://raw.githubusercontent.com/nicojan/zen-spaces-dropdown/main/mod/preferences.json",
+  "author": "nicojan",
+  "version": "1.0.0",
+  "tags": ["sidebar", "workspaces", "spaces", "dropdown", "productivity"],
+  "createdAt": "2026-05-12",
+  "updatedAt": "2026-05-12"
+}
