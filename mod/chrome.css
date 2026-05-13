@@ -27,13 +27,14 @@
  *   container:   #zen-workspaces-button
  *   row:         #zen-workspaces-button > toolbarbutton[zen-workspace-id]
  *   active row:  toolbarbutton[active="true"]
- *   name child:  .zen-workspace-sidebar-name (text content)
- *   icon child:  .zen-workspace-sidebar-icon
  *   reorder:     #zen-workspaces-button[reorder-mode="true"]
  *   drag state:  toolbarbutton[dragged="true"]
+ *   name:        toolbarbutton[label] (workspace name is on `label` attribute)
  *
  * License: CC BY-NC-SA 4.0
  * ========================================================================= */
+
+@namespace url("http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul");
 
 /* ─── Section 1 — Container becomes a vertical, upward-stacked dropdown ───── */
 
@@ -55,14 +56,9 @@
   position: relative;
   isolation: isolate;
 
-  /* Cap dropdown height for users with many workspaces; scroll inside. */
+  /* Cap dropdown height for users with many workspaces. */
   max-height: min(60vh, 480px);
 }
-
-/* When the dropdown is open AND has more rows than its max-height can show,
- * the inner overflow is handled by the row container itself: rows shrink first
- * via their min-height, and the container's max-height clamps via flex. We
- * don't enable scrollbars unless truly needed. */
 
 /* ─── Section 2 — Row styling (every workspace toolbarbutton) ─────────────── */
 
@@ -73,20 +69,26 @@
   height: auto !important;
   min-height: 36px !important;
   margin: 2px 0 !important;
-  padding: 8px 12px 8px 14px !important;
+  padding: 8px 12px !important;
   border-radius: 10px !important;
 
-  /* Layout: icon left, name right, optional chevron at far right. */
+  /* Layout: icon left, name right (via ::after), optional chevron at far right. */
   display: flex !important;
   flex-direction: row !important;
   align-items: center !important;
   gap: 10px !important;
   justify-content: flex-start !important;
+  text-align: left !important;
 
   /* Visual baseline (overrides Zen's grayscale-when-inactive). */
   filter: none !important;
   opacity: 1 !important;
   background-color: transparent !important;
+
+  /* Reset any inline width Zen's onWindowResize sets. */
+  /* (handled by width:100% !important above) */
+
+  position: relative;
 
   transition:
     background-color 140ms ease,
@@ -98,25 +100,43 @@
     min-height 200ms cubic-bezier(0.2, 0, 0, 1);
 }
 
-/* Workspace name visible inside each row (only in expanded sidebar). */
-:root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton .zen-workspace-sidebar-name {
-  display: inline-block !important;
-  margin-left: 0 !important;
-  overflow: hidden !important;
-  white-space: nowrap !important;
-  text-overflow: ellipsis !important;
-  font-size: 13px !important;
-  line-height: 1.2 !important;
-  max-width: 100% !important;
-  flex: 1 1 auto !important;
-  text-align: left !important;
-  color: inherit !important;
+/* The workspace icon stays compact, anchored left, no longer absolute. */
+:root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton .zen-workspace-icon,
+:root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton .zen-workspace-sidebar-wrapper {
+  position: static !important;
+  width: 18px !important;
+  height: 18px !important;
+  margin: 0 !important;
+  flex: 0 0 18px !important;
+  font-size: 14px !important;
+  line-height: 1 !important;
+  pointer-events: none;
 }
 
-/* Icon stays compact, anchored left. */
-:root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton .zen-workspace-sidebar-icon {
-  flex: 0 0 auto !important;
-  margin-inline-end: 0 !important;
+:root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton .zen-workspace-icon img {
+  width: 18px !important;
+  height: 18px !important;
+}
+
+/* Hide Zen's own sidebar-name (it gets replaced by our ::after pseudo). */
+:root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton .zen-workspace-sidebar-name {
+  display: none !important;
+}
+
+/* Workspace name as a pseudo-element fed by the `label` attribute.
+ * The chevron is concatenated for the active row. */
+:root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton[zen-workspace-id]::after {
+  content: attr(label);
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 13px;
+  line-height: 1.2;
+  text-align: left;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: inherit;
+  pointer-events: none;
 }
 
 /* Hover state. */
@@ -140,33 +160,23 @@
 
 /* ─── Section 3 — Trigger affordance (chevron on the active row) ─────────── */
 
-/* A subtle up-chevron on the right of the active workspace, hinting that the
- * dropdown opens upward. Rotates 180° (becomes a down-chevron) when open. */
-
-:root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton[active="true"]::after {
-  content: "⌃";
-  flex: 0 0 auto;
-  margin-left: auto;
-  margin-right: 2px;
-  font-size: 11px;
-  line-height: 1;
-  opacity: 0.55;
-  transform-origin: center;
-  transition: transform 220ms cubic-bezier(0.2, 0, 0, 1), opacity 180ms ease;
-  pointer-events: none;
+/* Active row's ::after concatenates the workspace name + a chevron. We swap
+ * the chevron character between open/closed states. */
+:root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton[active="true"][zen-workspace-id]::after {
+  content: attr(label) "  ⌃";
 }
 
-/* Hide the chevron entirely if there are no other workspaces to reveal. */
-:root[zen-sidebar-expanded="true"] #zen-workspaces-button:not(:has(toolbarbutton:not([active="true"]))) > toolbarbutton[active="true"]::after {
-  display: none;
+/* Hide the chevron entirely if there are no other workspaces to reveal —
+ * just show the label. */
+:root[zen-sidebar-expanded="true"] #zen-workspaces-button:not(:has(toolbarbutton:not([active="true"]))) > toolbarbutton[active="true"][zen-workspace-id]::after {
+  content: attr(label);
 }
 
-/* When the dropdown is open, flip the chevron so it points down ("now open"). */
-:root[zen-sidebar-expanded="true"] #zen-workspaces-button:hover > toolbarbutton[active="true"]::after,
-:root[zen-sidebar-expanded="true"] #zen-workspaces-button:focus-within > toolbarbutton[active="true"]::after,
-:root[zen-sidebar-expanded="true"] #zen-workspaces-button[reorder-mode="true"] > toolbarbutton[active="true"]::after {
-  transform: rotate(180deg);
-  opacity: 0.85;
+/* When the dropdown is open, flip the chevron downward. */
+:root[zen-sidebar-expanded="true"] #zen-workspaces-button:hover > toolbarbutton[active="true"][zen-workspace-id]::after,
+:root[zen-sidebar-expanded="true"] #zen-workspaces-button:focus-within > toolbarbutton[active="true"][zen-workspace-id]::after,
+:root[zen-sidebar-expanded="true"] #zen-workspaces-button[reorder-mode="true"] > toolbarbutton[active="true"][zen-workspace-id]::after {
+  content: attr(label) "  ⌄";
 }
 
 /* ─── Section 4 — Collapse / expand behavior ─────────────────────────────── */
@@ -183,6 +193,7 @@
   pointer-events: none !important;
   overflow: hidden !important;
   transform: translateY(6px) scale(0.985);
+  border: 0 !important;
 }
 
 /* OPEN: hover, keyboard-focus, or active drag-reorder. */
@@ -192,14 +203,15 @@
   max-height: 60px !important;
   min-height: 36px !important;
   margin: 2px 0 !important;
-  padding: 8px 12px 8px 14px !important;
+  padding: 8px 12px !important;
   opacity: 1 !important;
   pointer-events: auto !important;
   transform: none;
 }
 
 /* Panel chrome (background, blur, shadow) appears when the dropdown is open
- * AND there's at least one row to reveal. */
+ * AND there's at least one row to reveal. Padding-bottom is 0 so the active
+ * (trigger) row doesn't shift up when opening. */
 :root[zen-sidebar-expanded="true"] #zen-workspaces-button:has(toolbarbutton:not([active="true"])):hover,
 :root[zen-sidebar-expanded="true"] #zen-workspaces-button:has(toolbarbutton:not([active="true"])):focus-within,
 :root[zen-sidebar-expanded="true"] #zen-workspaces-button:has(toolbarbutton:not([active="true"]))[reorder-mode="true"] {
@@ -209,7 +221,7 @@
   box-shadow:
     0 12px 32px -10px rgba(0, 0, 0, 0.38),
     0 2px 8px -2px rgba(0, 0, 0, 0.18) !important;
-  padding: 4px !important;
+  padding: 4px 4px 0 4px !important;
   backdrop-filter: blur(6px);
 }
 
@@ -219,23 +231,23 @@
     max-height: 60px !important;
     min-height: 36px !important;
     margin: 2px 0 !important;
-    padding: 8px 12px 8px 14px !important;
+    padding: 8px 12px !important;
     opacity: 1 !important;
     pointer-events: auto !important;
     transform: none !important;
   }
 
-  /* No collapsing means no need for a "click to expand" affordance. */
-  :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton[active="true"]::after {
-    display: none;
+  /* No collapsing means no "click to expand" affordance needed — drop chevron. */
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton[active="true"][zen-workspace-id]::after {
+    content: attr(label);
   }
 
-  /* Always show panel chrome. */
+  /* Show panel chrome always. */
   :root[zen-sidebar-expanded="true"] #zen-workspaces-button:has(toolbarbutton:not([active="true"])) {
     background-color: color-mix(in srgb, Canvas 90%, currentColor 10%) !important;
     border: 1px solid color-mix(in srgb, currentColor 10%, transparent) !important;
     border-radius: 12px !important;
-    padding: 4px !important;
+    padding: 4px 4px 0 4px !important;
   }
 }
 
@@ -243,7 +255,6 @@
 
 @media (-moz-bool-pref: "mod.spaces-dropdown.show-drag-handles") {
   :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton {
-    position: relative;
     padding-left: 18px !important;
   }
 
@@ -268,8 +279,7 @@
     z-index: 1;
   }
 
-  /* Reveal grip when a row is hovered (only when dropdown is in an open state
-   * to avoid clutter on the closed-state trigger). */
+  /* Reveal grip when a row is hovered (only when dropdown is in an open state). */
   :root[zen-sidebar-expanded="true"] #zen-workspaces-button:hover > toolbarbutton:hover::before,
   :root[zen-sidebar-expanded="true"] #zen-workspaces-button:focus-within > toolbarbutton:focus::before,
   :root[zen-sidebar-expanded="true"] #zen-workspaces-button:focus-within > toolbarbutton:hover::before,
@@ -302,9 +312,9 @@
  * The active workspace is forced to `order: 0` so it stays at the very bottom
  * (the trigger position) regardless of its name.
  *
- * Name detection: Zen sets the workspace name on the toolbarbutton's `label`,
- * which is also surfaced as `aria-label` and `tooltiptext` in XUL. We match
- * all three so this works regardless of which Zen uses on the live element.
+ * Name detection: Zen exposes the workspace name via the toolbarbutton's
+ * `label` attribute. (Also commonly mirrored to `aria-label` and `tooltiptext`
+ * by XUL.) We match all three for resilience.
  */
 
 @media (-moz-pref("mod.spaces-dropdown.sort", "alphabetical")) {
@@ -312,7 +322,6 @@
     order: 0 !important;
   }
 
-  /* A — Z, applied via three attribute fallbacks. */
   :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton[label^="A" i],
   :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton[aria-label^="A" i],
   :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton[tooltiptext^="A" i] { order:  1 !important; }
@@ -402,7 +411,7 @@
     padding-bottom: 4px !important;
     margin: 1px 0 !important;
   }
-  :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton .zen-workspace-sidebar-name {
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton[zen-workspace-id]::after {
     font-size: 12px !important;
   }
   :root[zen-sidebar-expanded="true"] #zen-workspaces-button:hover > toolbarbutton:not([active="true"]),
