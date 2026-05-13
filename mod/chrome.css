@@ -1,0 +1,331 @@
+/* ============================================================================
+ * Spaces Dropdown — Zen Browser Mod
+ * https://github.com/nicojan/zen-spaces-dropdown
+ *
+ * Turns Zen's inline workspace switcher (#zen-workspaces-button) at the bottom
+ * of the sidebar into an upward-opening dropdown.
+ *
+ *   - Collapsed by default: only the active workspace is visible, styled as
+ *     the dropdown's trigger.
+ *   - On hover OR keyboard focus-within, the dropdown expands upward, stacking
+ *     all other workspaces above the active one.
+ *   - Workspace #1 sits at the bottom (closest to the trigger); higher-numbered
+ *     workspaces stack upward.
+ *   - Zen's built-in drag-to-reorder is preserved unchanged.
+ *
+ * User preferences (set via Zen Settings → Mods):
+ *   - mod.spaces-dropdown.sort           "manual" | "alphabetical"
+ *   - mod.spaces-dropdown.show-drag-handles   true | false
+ *   - mod.spaces-dropdown.compact        true | false
+ *   - mod.spaces-dropdown.always-open    true | false
+ *
+ * Selector reference (verified against zen-browser/desktop main on 2026-05-12):
+ *   container:   #zen-workspaces-button
+ *   row:         #zen-workspaces-button > toolbarbutton[zen-workspace-id]
+ *   active row:  toolbarbutton[active="true"]
+ *   name child:  .zen-workspace-sidebar-name (text content)
+ *   icon child:  .zen-workspace-sidebar-icon
+ *   reorder:     #zen-workspaces-button[reorder-mode="true"]
+ *
+ * License: CC BY-NC-SA 4.0
+ * ========================================================================= */
+
+/* ─── Section 1 — Container becomes a vertical, upward-stacked dropdown ───── */
+
+#zen-workspaces-button {
+  /* Override Zen's default horizontal/auto-scroll layout. */
+  display: flex !important;
+  flex-direction: column-reverse !important;
+  align-items: stretch !important;
+  justify-content: flex-end !important;
+  overflow: visible !important;
+  overflow-x: visible !important;
+  scroll-behavior: auto !important;
+
+  /* Reset constraints that were tuned for a horizontal row of icons. */
+  width: 100% !important;
+  gap: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+
+  /* Anchor for the absolutely-positioned dropdown panel. */
+  position: relative;
+  isolation: isolate;
+}
+
+/* ─── Section 2 — Row styling (every workspace toolbarbutton) ─────────────── */
+
+#zen-workspaces-button > toolbarbutton {
+  /* Reset Zen's tiny-icon presentation: rows are now full-width "menu items". */
+  max-width: none !important;
+  width: 100% !important;
+  height: auto !important;
+  min-height: 36px !important;
+  margin: 2px 6px !important;
+  padding: 8px 12px 8px 14px !important;
+  border-radius: 10px !important;
+
+  /* Layout: icon on the left, name flowing right. */
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 10px !important;
+  justify-content: flex-start !important;
+
+  /* Visual baseline (overrides Zen's grayscale-when-inactive). */
+  filter: none !important;
+  opacity: 1 !important;
+  background-color: transparent !important;
+
+  transition:
+    background-color 140ms ease,
+    opacity 180ms ease,
+    transform 140ms ease,
+    margin 180ms ease;
+}
+
+/* Workspace name always visible inside our dropdown rows. */
+#zen-workspaces-button > toolbarbutton .zen-workspace-sidebar-name {
+  display: inline-block !important;
+  margin-left: 0 !important;
+  overflow: hidden !important;
+  white-space: nowrap !important;
+  text-overflow: ellipsis !important;
+  font-size: 13px !important;
+  line-height: 1.2 !important;
+  max-width: 100% !important;
+  flex: 1 1 auto !important;
+  text-align: left !important;
+  color: inherit !important;
+}
+
+/* Icon stays compact, on the left. */
+#zen-workspaces-button > toolbarbutton .zen-workspace-sidebar-icon {
+  flex: 0 0 auto !important;
+  margin-inline-end: 0 !important;
+}
+
+/* Hover state. */
+#zen-workspaces-button > toolbarbutton:hover {
+  background-color: color-mix(in srgb, currentColor 8%, transparent) !important;
+}
+
+/* Active workspace = the "trigger" of the dropdown. */
+#zen-workspaces-button > toolbarbutton[active="true"] {
+  background-color: color-mix(in srgb, AccentColor 18%, transparent) !important;
+  font-weight: 600 !important;
+}
+#zen-workspaces-button > toolbarbutton[active="true"]:hover {
+  background-color: color-mix(in srgb, AccentColor 26%, transparent) !important;
+}
+
+/* Press feedback. */
+#zen-workspaces-button > toolbarbutton:active {
+  transform: scale(0.985);
+}
+
+/* ─── Section 3 — Dropdown collapse/expand behavior ──────────────────────── */
+
+/*
+ * Default (closed): only the active workspace is visible. Inactive rows are
+ * collapsed to zero height, opacity 0, with pointer-events disabled. The
+ * active row acts as the dropdown's "trigger".
+ *
+ * Open (hover or focus-within): all rows animate in upward, stacked above the
+ * active row (because of column-reverse + DOM order).
+ *
+ * Toggle off via the `always-open` preference: rows are always visible.
+ */
+
+@media not (-moz-bool-pref: "mod.spaces-dropdown.always-open") {
+  /* Closed state */
+  #zen-workspaces-button > toolbarbutton:not([active="true"]) {
+    max-height: 0 !important;
+    min-height: 0 !important;
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    overflow: hidden !important;
+    transform: translateY(6px) scale(0.98);
+    /* Stagger the entrance later via transition-delay overrides if needed. */
+    transition:
+      max-height 200ms cubic-bezier(0.2, 0, 0, 1),
+      min-height 200ms cubic-bezier(0.2, 0, 0, 1),
+      opacity 160ms ease,
+      transform 200ms cubic-bezier(0.2, 0, 0, 1),
+      margin 200ms cubic-bezier(0.2, 0, 0, 1),
+      padding 200ms cubic-bezier(0.2, 0, 0, 1);
+  }
+
+  /* Open state */
+  #zen-workspaces-button:hover > toolbarbutton:not([active="true"]),
+  #zen-workspaces-button:focus-within > toolbarbutton:not([active="true"]),
+  #zen-workspaces-button[reorder-mode="true"] > toolbarbutton:not([active="true"]) {
+    max-height: 60px !important;
+    min-height: 36px !important;
+    margin: 2px 6px !important;
+    padding: 8px 12px 8px 14px !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    transform: none;
+  }
+
+  /* When the dropdown is open, give the container a panel-like backdrop so it
+   * reads as a unified menu rather than floating rows. */
+  #zen-workspaces-button:hover,
+  #zen-workspaces-button:focus-within,
+  #zen-workspaces-button[reorder-mode="true"] {
+    background-color: color-mix(in srgb, Canvas 92%, currentColor 8%) !important;
+    border: 1px solid color-mix(in srgb, currentColor 12%, transparent) !important;
+    border-radius: 12px !important;
+    box-shadow:
+      0 10px 30px -10px rgba(0, 0, 0, 0.35),
+      0 2px 8px -2px rgba(0, 0, 0, 0.15) !important;
+    padding: 4px !important;
+    margin: 0 !important;
+    backdrop-filter: blur(6px);
+  }
+}
+
+/* When always-open is on, just show everything — no collapse, no panel chrome. */
+@media (-moz-bool-pref: "mod.spaces-dropdown.always-open") {
+  #zen-workspaces-button > toolbarbutton {
+    /* Already styled above; nothing to add — they all stay visible. */
+  }
+}
+
+/* ─── Section 4 — Drag-handle grip glyph (hover-revealed) ────────────────── */
+
+@media (-moz-bool-pref: "mod.spaces-dropdown.show-drag-handles") {
+  #zen-workspaces-button > toolbarbutton {
+    position: relative;
+  }
+
+  /* CSS-drawn grip: 2 columns × 3 dots, in currentColor, no asset needed. */
+  #zen-workspaces-button > toolbarbutton::before {
+    content: "";
+    position: absolute;
+    left: 4px;
+    top: 50%;
+    width: 6px;
+    height: 14px;
+    transform: translateY(-50%);
+    background-image:
+      radial-gradient(circle, currentColor 1.1px, transparent 1.4px),
+      radial-gradient(circle, currentColor 1.1px, transparent 1.4px);
+    background-position: 0 1px, 3px 1px;
+    background-size: 3px 5px;
+    background-repeat: repeat-y;
+    opacity: 0;
+    transition: opacity 140ms ease;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  /* Show grip whenever the row is hovered, or the dropdown is open. */
+  #zen-workspaces-button:hover > toolbarbutton:hover::before,
+  #zen-workspaces-button:focus-within > toolbarbutton:focus::before,
+  #zen-workspaces-button:focus-within > toolbarbutton:hover::before,
+  #zen-workspaces-button[reorder-mode="true"] > toolbarbutton::before {
+    opacity: 0.55;
+  }
+
+  /* Reorder mode = full-strength grip on the row being dragged. */
+  #zen-workspaces-button[reorder-mode="true"] > toolbarbutton[dragged="true"]::before {
+    opacity: 1;
+  }
+
+  /* Make room for the grip without crowding the icon. */
+  #zen-workspaces-button > toolbarbutton {
+    padding-left: 18px !important;
+  }
+}
+
+/* ─── Section 5 — Alphabetical sort (A → Z, A nearest the trigger) ───────── */
+
+/*
+ * The container is column-reverse, so a higher `order` value renders nearer
+ * the top of the dropdown (further from the trigger). To put A nearest the
+ * trigger (bottom), assign A the LOWEST order under column-reverse.
+ *
+ *   column-reverse rule of thumb:
+ *     visual-bottom = lowest order
+ *     visual-top    = highest order
+ *
+ * So we want A=1 (nearest trigger), Z=26 (furthest), non-letter=27.
+ *
+ * Selectors: workspace names are exposed as the text content of
+ * `.zen-workspace-sidebar-name`. CSS cannot read text content for matching,
+ * but Zen also sets the workspace name on the toolbarbutton's `label`
+ * attribute (used by accessibility / tooltips). We target `[label^=...]` and
+ * fall back to attribute-less behavior if Zen omits it.
+ */
+
+@media (-moz-pref("mod.spaces-dropdown.sort", "alphabetical")) {
+  #zen-workspaces-button > toolbarbutton[label^="A" i] { order:  1 !important; }
+  #zen-workspaces-button > toolbarbutton[label^="B" i] { order:  2 !important; }
+  #zen-workspaces-button > toolbarbutton[label^="C" i] { order:  3 !important; }
+  #zen-workspaces-button > toolbarbutton[label^="D" i] { order:  4 !important; }
+  #zen-workspaces-button > toolbarbutton[label^="E" i] { order:  5 !important; }
+  #zen-workspaces-button > toolbarbutton[label^="F" i] { order:  6 !important; }
+  #zen-workspaces-button > toolbarbutton[label^="G" i] { order:  7 !important; }
+  #zen-workspaces-button > toolbarbutton[label^="H" i] { order:  8 !important; }
+  #zen-workspaces-button > toolbarbutton[label^="I" i] { order:  9 !important; }
+  #zen-workspaces-button > toolbarbutton[label^="J" i] { order: 10 !important; }
+  #zen-workspaces-button > toolbarbutton[label^="K" i] { order: 11 !important; }
+  #zen-workspaces-button > toolbarbutton[label^="L" i] { order: 12 !important; }
+  #zen-workspaces-button > toolbarbutton[label^="M" i] { order: 13 !important; }
+  #zen-workspaces-button > toolbarbutton[label^="N" i] { order: 14 !important; }
+  #zen-workspaces-button > toolbarbutton[label^="O" i] { order: 15 !important; }
+  #zen-workspaces-button > toolbarbutton[label^="P" i] { order: 16 !important; }
+  #zen-workspaces-button > toolbarbutton[label^="Q" i] { order: 17 !important; }
+  #zen-workspaces-button > toolbarbutton[label^="R" i] { order: 18 !important; }
+  #zen-workspaces-button > toolbarbutton[label^="S" i] { order: 19 !important; }
+  #zen-workspaces-button > toolbarbutton[label^="T" i] { order: 20 !important; }
+  #zen-workspaces-button > toolbarbutton[label^="U" i] { order: 21 !important; }
+  #zen-workspaces-button > toolbarbutton[label^="V" i] { order: 22 !important; }
+  #zen-workspaces-button > toolbarbutton[label^="W" i] { order: 23 !important; }
+  #zen-workspaces-button > toolbarbutton[label^="X" i] { order: 24 !important; }
+  #zen-workspaces-button > toolbarbutton[label^="Y" i] { order: 25 !important; }
+  #zen-workspaces-button > toolbarbutton[label^="Z" i] { order: 26 !important; }
+  /* Anything not starting with a letter (numbers, emoji, etc.) sorts after Z. */
+  #zen-workspaces-button > toolbarbutton:not([label^="A" i]):not([label^="B" i]):not([label^="C" i]):not([label^="D" i]):not([label^="E" i]):not([label^="F" i]):not([label^="G" i]):not([label^="H" i]):not([label^="I" i]):not([label^="J" i]):not([label^="K" i]):not([label^="L" i]):not([label^="M" i]):not([label^="N" i]):not([label^="O" i]):not([label^="P" i]):not([label^="Q" i]):not([label^="R" i]):not([label^="S" i]):not([label^="T" i]):not([label^="U" i]):not([label^="V" i]):not([label^="W" i]):not([label^="X" i]):not([label^="Y" i]):not([label^="Z" i]) {
+    order: 27 !important;
+  }
+}
+
+/* ─── Section 6 — Compact rows ───────────────────────────────────────────── */
+
+@media (-moz-bool-pref: "mod.spaces-dropdown.compact") {
+  #zen-workspaces-button > toolbarbutton {
+    min-height: 28px !important;
+    padding-top: 4px !important;
+    padding-bottom: 4px !important;
+    margin: 1px 6px !important;
+  }
+  #zen-workspaces-button > toolbarbutton .zen-workspace-sidebar-name {
+    font-size: 12px !important;
+  }
+  @media (-moz-bool-pref: "mod.spaces-dropdown.show-drag-handles") {
+    #zen-workspaces-button > toolbarbutton::before {
+      height: 10px;
+      background-size: 3px 4px;
+    }
+  }
+}
+
+/* ─── Section 7 — Reduced motion ─────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  #zen-workspaces-button > toolbarbutton,
+  #zen-workspaces-button > toolbarbutton::before,
+  #zen-workspaces-button {
+    transition: none !important;
+  }
+  #zen-workspaces-button > toolbarbutton:not([active="true"]) {
+    transform: none !important;
+  }
+}
