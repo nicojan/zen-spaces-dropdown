@@ -6,33 +6,38 @@
  * of the sidebar into an upward-opening dropdown.
  *
  *   - Collapsed by default: only the active workspace is visible, styled as
- *     the dropdown's trigger.
+ *     the dropdown's trigger (with a subtle chevron affordance).
  *   - On hover OR keyboard focus-within, the dropdown expands upward, stacking
  *     all other workspaces above the active one.
  *   - Workspace #1 sits at the bottom (closest to the trigger); higher-numbered
  *     workspaces stack upward.
  *   - Zen's built-in drag-to-reorder is preserved unchanged.
  *
- * User preferences (set via Zen Settings → Mods):
- *   - mod.spaces-dropdown.sort           "manual" | "alphabetical"
- *   - mod.spaces-dropdown.show-drag-handles   true | false
- *   - mod.spaces-dropdown.compact        true | false
- *   - mod.spaces-dropdown.always-open    true | false
+ * All styling is scoped to expanded-sidebar mode
+ * (`:root[zen-sidebar-expanded="true"]`); the collapsed (icons-only) sidebar
+ * is left untouched.
  *
- * Selector reference (verified against zen-browser/desktop main on 2026-05-12):
+ * User preferences (set via Zen Settings → Mods):
+ *   - mod.spaces-dropdown.sort                "manual" | "alphabetical"
+ *   - mod.spaces-dropdown.show-drag-handles   true | false
+ *   - mod.spaces-dropdown.compact             true | false
+ *   - mod.spaces-dropdown.always-open         true | false
+ *
+ * Selector reference (verified against zen-browser/desktop main, 2026-05-12):
  *   container:   #zen-workspaces-button
  *   row:         #zen-workspaces-button > toolbarbutton[zen-workspace-id]
  *   active row:  toolbarbutton[active="true"]
  *   name child:  .zen-workspace-sidebar-name (text content)
  *   icon child:  .zen-workspace-sidebar-icon
  *   reorder:     #zen-workspaces-button[reorder-mode="true"]
+ *   drag state:  toolbarbutton[dragged="true"]
  *
  * License: CC BY-NC-SA 4.0
  * ========================================================================= */
 
 /* ─── Section 1 — Container becomes a vertical, upward-stacked dropdown ───── */
 
-#zen-workspaces-button {
+:root[zen-sidebar-expanded="true"] #zen-workspaces-button {
   /* Override Zen's default horizontal/auto-scroll layout. */
   display: flex !important;
   flex-direction: column-reverse !important;
@@ -42,30 +47,36 @@
   overflow-x: visible !important;
   scroll-behavior: auto !important;
 
-  /* Reset constraints that were tuned for a horizontal row of icons. */
   width: 100% !important;
   gap: 0 !important;
   padding: 0 !important;
   margin: 0 !important;
 
-  /* Anchor for the absolutely-positioned dropdown panel. */
   position: relative;
   isolation: isolate;
+
+  /* Cap dropdown height for users with many workspaces; scroll inside. */
+  max-height: min(60vh, 480px);
 }
+
+/* When the dropdown is open AND has more rows than its max-height can show,
+ * the inner overflow is handled by the row container itself: rows shrink first
+ * via their min-height, and the container's max-height clamps via flex. We
+ * don't enable scrollbars unless truly needed. */
 
 /* ─── Section 2 — Row styling (every workspace toolbarbutton) ─────────────── */
 
-#zen-workspaces-button > toolbarbutton {
-  /* Reset Zen's tiny-icon presentation: rows are now full-width "menu items". */
+:root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton {
+  /* Reset Zen's compact-icon presentation: rows become full-width menu items. */
   max-width: none !important;
   width: 100% !important;
   height: auto !important;
   min-height: 36px !important;
-  margin: 2px 6px !important;
+  margin: 2px 0 !important;
   padding: 8px 12px 8px 14px !important;
   border-radius: 10px !important;
 
-  /* Layout: icon on the left, name flowing right. */
+  /* Layout: icon left, name right, optional chevron at far right. */
   display: flex !important;
   flex-direction: row !important;
   align-items: center !important;
@@ -81,11 +92,14 @@
     background-color 140ms ease,
     opacity 180ms ease,
     transform 140ms ease,
-    margin 180ms ease;
+    margin 200ms cubic-bezier(0.2, 0, 0, 1),
+    padding 200ms cubic-bezier(0.2, 0, 0, 1),
+    max-height 200ms cubic-bezier(0.2, 0, 0, 1),
+    min-height 200ms cubic-bezier(0.2, 0, 0, 1);
 }
 
-/* Workspace name always visible inside our dropdown rows. */
-#zen-workspaces-button > toolbarbutton .zen-workspace-sidebar-name {
+/* Workspace name visible inside each row (only in expanded sidebar). */
+:root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton .zen-workspace-sidebar-name {
   display: inline-block !important;
   margin-left: 0 !important;
   overflow: hidden !important;
@@ -99,113 +113,142 @@
   color: inherit !important;
 }
 
-/* Icon stays compact, on the left. */
-#zen-workspaces-button > toolbarbutton .zen-workspace-sidebar-icon {
+/* Icon stays compact, anchored left. */
+:root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton .zen-workspace-sidebar-icon {
   flex: 0 0 auto !important;
   margin-inline-end: 0 !important;
 }
 
 /* Hover state. */
-#zen-workspaces-button > toolbarbutton:hover {
-  background-color: color-mix(in srgb, currentColor 8%, transparent) !important;
+:root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton:hover {
+  background-color: color-mix(in srgb, currentColor 9%, transparent) !important;
 }
 
-/* Active workspace = the "trigger" of the dropdown. */
-#zen-workspaces-button > toolbarbutton[active="true"] {
+/* Active workspace = the trigger; accent-tinted background. */
+:root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton[active="true"] {
   background-color: color-mix(in srgb, AccentColor 18%, transparent) !important;
   font-weight: 600 !important;
 }
-#zen-workspaces-button > toolbarbutton[active="true"]:hover {
+:root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton[active="true"]:hover {
   background-color: color-mix(in srgb, AccentColor 26%, transparent) !important;
 }
 
 /* Press feedback. */
-#zen-workspaces-button > toolbarbutton:active {
+:root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton:active {
   transform: scale(0.985);
 }
 
-/* ─── Section 3 — Dropdown collapse/expand behavior ──────────────────────── */
+/* ─── Section 3 — Trigger affordance (chevron on the active row) ─────────── */
 
-/*
- * Default (closed): only the active workspace is visible. Inactive rows are
- * collapsed to zero height, opacity 0, with pointer-events disabled. The
- * active row acts as the dropdown's "trigger".
- *
- * Open (hover or focus-within): all rows animate in upward, stacked above the
- * active row (because of column-reverse + DOM order).
- *
- * Toggle off via the `always-open` preference: rows are always visible.
- */
+/* A subtle up-chevron on the right of the active workspace, hinting that the
+ * dropdown opens upward. Rotates 180° (becomes a down-chevron) when open. */
 
-@media not (-moz-bool-pref: "mod.spaces-dropdown.always-open") {
-  /* Closed state */
-  #zen-workspaces-button > toolbarbutton:not([active="true"]) {
-    max-height: 0 !important;
-    min-height: 0 !important;
-    margin-top: 0 !important;
-    margin-bottom: 0 !important;
-    padding-top: 0 !important;
-    padding-bottom: 0 !important;
-    opacity: 0 !important;
-    pointer-events: none !important;
-    overflow: hidden !important;
-    transform: translateY(6px) scale(0.98);
-    /* Stagger the entrance later via transition-delay overrides if needed. */
-    transition:
-      max-height 200ms cubic-bezier(0.2, 0, 0, 1),
-      min-height 200ms cubic-bezier(0.2, 0, 0, 1),
-      opacity 160ms ease,
-      transform 200ms cubic-bezier(0.2, 0, 0, 1),
-      margin 200ms cubic-bezier(0.2, 0, 0, 1),
-      padding 200ms cubic-bezier(0.2, 0, 0, 1);
-  }
+:root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton[active="true"]::after {
+  content: "⌃";
+  flex: 0 0 auto;
+  margin-left: auto;
+  margin-right: 2px;
+  font-size: 11px;
+  line-height: 1;
+  opacity: 0.55;
+  transform-origin: center;
+  transition: transform 220ms cubic-bezier(0.2, 0, 0, 1), opacity 180ms ease;
+  pointer-events: none;
+}
 
-  /* Open state */
-  #zen-workspaces-button:hover > toolbarbutton:not([active="true"]),
-  #zen-workspaces-button:focus-within > toolbarbutton:not([active="true"]),
-  #zen-workspaces-button[reorder-mode="true"] > toolbarbutton:not([active="true"]) {
+/* Hide the chevron entirely if there are no other workspaces to reveal. */
+:root[zen-sidebar-expanded="true"] #zen-workspaces-button:not(:has(toolbarbutton:not([active="true"]))) > toolbarbutton[active="true"]::after {
+  display: none;
+}
+
+/* When the dropdown is open, flip the chevron so it points down ("now open"). */
+:root[zen-sidebar-expanded="true"] #zen-workspaces-button:hover > toolbarbutton[active="true"]::after,
+:root[zen-sidebar-expanded="true"] #zen-workspaces-button:focus-within > toolbarbutton[active="true"]::after,
+:root[zen-sidebar-expanded="true"] #zen-workspaces-button[reorder-mode="true"] > toolbarbutton[active="true"]::after {
+  transform: rotate(180deg);
+  opacity: 0.85;
+}
+
+/* ─── Section 4 — Collapse / expand behavior ─────────────────────────────── */
+
+/* DEFAULT: collapsed. Only [active="true"] is visible. */
+:root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton:not([active="true"]) {
+  max-height: 0 !important;
+  min-height: 0 !important;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  overflow: hidden !important;
+  transform: translateY(6px) scale(0.985);
+}
+
+/* OPEN: hover, keyboard-focus, or active drag-reorder. */
+:root[zen-sidebar-expanded="true"] #zen-workspaces-button:hover > toolbarbutton:not([active="true"]),
+:root[zen-sidebar-expanded="true"] #zen-workspaces-button:focus-within > toolbarbutton:not([active="true"]),
+:root[zen-sidebar-expanded="true"] #zen-workspaces-button[reorder-mode="true"] > toolbarbutton:not([active="true"]) {
+  max-height: 60px !important;
+  min-height: 36px !important;
+  margin: 2px 0 !important;
+  padding: 8px 12px 8px 14px !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  transform: none;
+}
+
+/* Panel chrome (background, blur, shadow) appears when the dropdown is open
+ * AND there's at least one row to reveal. */
+:root[zen-sidebar-expanded="true"] #zen-workspaces-button:has(toolbarbutton:not([active="true"])):hover,
+:root[zen-sidebar-expanded="true"] #zen-workspaces-button:has(toolbarbutton:not([active="true"])):focus-within,
+:root[zen-sidebar-expanded="true"] #zen-workspaces-button:has(toolbarbutton:not([active="true"]))[reorder-mode="true"] {
+  background-color: color-mix(in srgb, Canvas 88%, currentColor 12%) !important;
+  border: 1px solid color-mix(in srgb, currentColor 14%, transparent) !important;
+  border-radius: 12px !important;
+  box-shadow:
+    0 12px 32px -10px rgba(0, 0, 0, 0.38),
+    0 2px 8px -2px rgba(0, 0, 0, 0.18) !important;
+  padding: 4px !important;
+  backdrop-filter: blur(6px);
+}
+
+/* OVERRIDE: always-open mode. The collapsed default above is overridden. */
+@media (-moz-bool-pref: "mod.spaces-dropdown.always-open") {
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton:not([active="true"]) {
     max-height: 60px !important;
     min-height: 36px !important;
-    margin: 2px 6px !important;
+    margin: 2px 0 !important;
     padding: 8px 12px 8px 14px !important;
     opacity: 1 !important;
     pointer-events: auto !important;
-    transform: none;
+    transform: none !important;
   }
 
-  /* When the dropdown is open, give the container a panel-like backdrop so it
-   * reads as a unified menu rather than floating rows. */
-  #zen-workspaces-button:hover,
-  #zen-workspaces-button:focus-within,
-  #zen-workspaces-button[reorder-mode="true"] {
-    background-color: color-mix(in srgb, Canvas 92%, currentColor 8%) !important;
-    border: 1px solid color-mix(in srgb, currentColor 12%, transparent) !important;
+  /* No collapsing means no need for a "click to expand" affordance. */
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton[active="true"]::after {
+    display: none;
+  }
+
+  /* Always show panel chrome. */
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button:has(toolbarbutton:not([active="true"])) {
+    background-color: color-mix(in srgb, Canvas 90%, currentColor 10%) !important;
+    border: 1px solid color-mix(in srgb, currentColor 10%, transparent) !important;
     border-radius: 12px !important;
-    box-shadow:
-      0 10px 30px -10px rgba(0, 0, 0, 0.35),
-      0 2px 8px -2px rgba(0, 0, 0, 0.15) !important;
     padding: 4px !important;
-    margin: 0 !important;
-    backdrop-filter: blur(6px);
   }
 }
 
-/* When always-open is on, just show everything — no collapse, no panel chrome. */
-@media (-moz-bool-pref: "mod.spaces-dropdown.always-open") {
-  #zen-workspaces-button > toolbarbutton {
-    /* Already styled above; nothing to add — they all stay visible. */
-  }
-}
-
-/* ─── Section 4 — Drag-handle grip glyph (hover-revealed) ────────────────── */
+/* ─── Section 5 — Drag-handle grip glyph (hover-revealed) ────────────────── */
 
 @media (-moz-bool-pref: "mod.spaces-dropdown.show-drag-handles") {
-  #zen-workspaces-button > toolbarbutton {
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton {
     position: relative;
+    padding-left: 18px !important;
   }
 
-  /* CSS-drawn grip: 2 columns × 3 dots, in currentColor, no asset needed. */
-  #zen-workspaces-button > toolbarbutton::before {
+  /* 2 columns × 3 dots, drawn with radial-gradients — no asset needed. */
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton::before {
     content: "";
     position: absolute;
     left: 4px;
@@ -225,107 +268,170 @@
     z-index: 1;
   }
 
-  /* Show grip whenever the row is hovered, or the dropdown is open. */
-  #zen-workspaces-button:hover > toolbarbutton:hover::before,
-  #zen-workspaces-button:focus-within > toolbarbutton:focus::before,
-  #zen-workspaces-button:focus-within > toolbarbutton:hover::before,
-  #zen-workspaces-button[reorder-mode="true"] > toolbarbutton::before {
-    opacity: 0.55;
+  /* Reveal grip when a row is hovered (only when dropdown is in an open state
+   * to avoid clutter on the closed-state trigger). */
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button:hover > toolbarbutton:hover::before,
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button:focus-within > toolbarbutton:focus::before,
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button:focus-within > toolbarbutton:hover::before,
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button[reorder-mode="true"] > toolbarbutton::before {
+    opacity: 0.6;
   }
 
-  /* Reorder mode = full-strength grip on the row being dragged. */
-  #zen-workspaces-button[reorder-mode="true"] > toolbarbutton[dragged="true"]::before {
+  /* Always-open mode: show grip on hover of any row, anytime. */
+  @media (-moz-bool-pref: "mod.spaces-dropdown.always-open") {
+    :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton:hover::before {
+      opacity: 0.6;
+    }
+  }
+
+  /* Full-strength grip on the row being actively dragged. */
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button[reorder-mode="true"] > toolbarbutton[dragged="true"]::before {
     opacity: 1;
-  }
-
-  /* Make room for the grip without crowding the icon. */
-  #zen-workspaces-button > toolbarbutton {
-    padding-left: 18px !important;
   }
 }
 
-/* ─── Section 5 — Alphabetical sort (A → Z, A nearest the trigger) ───────── */
+/* ─── Section 6 — Alphabetical sort (A → Z, A nearest the trigger) ───────── */
 
 /*
- * The container is column-reverse, so a higher `order` value renders nearer
- * the top of the dropdown (further from the trigger). To put A nearest the
- * trigger (bottom), assign A the LOWEST order under column-reverse.
+ * Under `flex-direction: column-reverse`:
+ *   lowest  order = visual bottom (nearest trigger)
+ *   highest order = visual top (furthest from trigger)
  *
- *   column-reverse rule of thumb:
- *     visual-bottom = lowest order
- *     visual-top    = highest order
+ * Goal: A nearest the trigger → A gets order 1, Z gets order 26.
  *
- * So we want A=1 (nearest trigger), Z=26 (furthest), non-letter=27.
+ * The active workspace is forced to `order: 0` so it stays at the very bottom
+ * (the trigger position) regardless of its name.
  *
- * Selectors: workspace names are exposed as the text content of
- * `.zen-workspace-sidebar-name`. CSS cannot read text content for matching,
- * but Zen also sets the workspace name on the toolbarbutton's `label`
- * attribute (used by accessibility / tooltips). We target `[label^=...]` and
- * fall back to attribute-less behavior if Zen omits it.
+ * Name detection: Zen sets the workspace name on the toolbarbutton's `label`,
+ * which is also surfaced as `aria-label` and `tooltiptext` in XUL. We match
+ * all three so this works regardless of which Zen uses on the live element.
  */
 
 @media (-moz-pref("mod.spaces-dropdown.sort", "alphabetical")) {
-  #zen-workspaces-button > toolbarbutton[label^="A" i] { order:  1 !important; }
-  #zen-workspaces-button > toolbarbutton[label^="B" i] { order:  2 !important; }
-  #zen-workspaces-button > toolbarbutton[label^="C" i] { order:  3 !important; }
-  #zen-workspaces-button > toolbarbutton[label^="D" i] { order:  4 !important; }
-  #zen-workspaces-button > toolbarbutton[label^="E" i] { order:  5 !important; }
-  #zen-workspaces-button > toolbarbutton[label^="F" i] { order:  6 !important; }
-  #zen-workspaces-button > toolbarbutton[label^="G" i] { order:  7 !important; }
-  #zen-workspaces-button > toolbarbutton[label^="H" i] { order:  8 !important; }
-  #zen-workspaces-button > toolbarbutton[label^="I" i] { order:  9 !important; }
-  #zen-workspaces-button > toolbarbutton[label^="J" i] { order: 10 !important; }
-  #zen-workspaces-button > toolbarbutton[label^="K" i] { order: 11 !important; }
-  #zen-workspaces-button > toolbarbutton[label^="L" i] { order: 12 !important; }
-  #zen-workspaces-button > toolbarbutton[label^="M" i] { order: 13 !important; }
-  #zen-workspaces-button > toolbarbutton[label^="N" i] { order: 14 !important; }
-  #zen-workspaces-button > toolbarbutton[label^="O" i] { order: 15 !important; }
-  #zen-workspaces-button > toolbarbutton[label^="P" i] { order: 16 !important; }
-  #zen-workspaces-button > toolbarbutton[label^="Q" i] { order: 17 !important; }
-  #zen-workspaces-button > toolbarbutton[label^="R" i] { order: 18 !important; }
-  #zen-workspaces-button > toolbarbutton[label^="S" i] { order: 19 !important; }
-  #zen-workspaces-button > toolbarbutton[label^="T" i] { order: 20 !important; }
-  #zen-workspaces-button > toolbarbutton[label^="U" i] { order: 21 !important; }
-  #zen-workspaces-button > toolbarbutton[label^="V" i] { order: 22 !important; }
-  #zen-workspaces-button > toolbarbutton[label^="W" i] { order: 23 !important; }
-  #zen-workspaces-button > toolbarbutton[label^="X" i] { order: 24 !important; }
-  #zen-workspaces-button > toolbarbutton[label^="Y" i] { order: 25 !important; }
-  #zen-workspaces-button > toolbarbutton[label^="Z" i] { order: 26 !important; }
-  /* Anything not starting with a letter (numbers, emoji, etc.) sorts after Z. */
-  #zen-workspaces-button > toolbarbutton:not([label^="A" i]):not([label^="B" i]):not([label^="C" i]):not([label^="D" i]):not([label^="E" i]):not([label^="F" i]):not([label^="G" i]):not([label^="H" i]):not([label^="I" i]):not([label^="J" i]):not([label^="K" i]):not([label^="L" i]):not([label^="M" i]):not([label^="N" i]):not([label^="O" i]):not([label^="P" i]):not([label^="Q" i]):not([label^="R" i]):not([label^="S" i]):not([label^="T" i]):not([label^="U" i]):not([label^="V" i]):not([label^="W" i]):not([label^="X" i]):not([label^="Y" i]):not([label^="Z" i]) {
-    order: 27 !important;
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton[active="true"] {
+    order: 0 !important;
   }
+
+  /* A — Z, applied via three attribute fallbacks. */
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton[label^="A" i],
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton[aria-label^="A" i],
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton[tooltiptext^="A" i] { order:  1 !important; }
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton[label^="B" i],
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton[aria-label^="B" i],
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton[tooltiptext^="B" i] { order:  2 !important; }
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton[label^="C" i],
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton[aria-label^="C" i],
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton[tooltiptext^="C" i] { order:  3 !important; }
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton[label^="D" i],
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton[aria-label^="D" i],
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton[tooltiptext^="D" i] { order:  4 !important; }
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton[label^="E" i],
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton[aria-label^="E" i],
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton[tooltiptext^="E" i] { order:  5 !important; }
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton[label^="F" i],
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton[aria-label^="F" i],
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton[tooltiptext^="F" i] { order:  6 !important; }
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton[label^="G" i],
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton[aria-label^="G" i],
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton[tooltiptext^="G" i] { order:  7 !important; }
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton[label^="H" i],
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton[aria-label^="H" i],
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton[tooltiptext^="H" i] { order:  8 !important; }
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton[label^="I" i],
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton[aria-label^="I" i],
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton[tooltiptext^="I" i] { order:  9 !important; }
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton[label^="J" i],
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton[aria-label^="J" i],
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton[tooltiptext^="J" i] { order: 10 !important; }
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton[label^="K" i],
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton[aria-label^="K" i],
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton[tooltiptext^="K" i] { order: 11 !important; }
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton[label^="L" i],
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton[aria-label^="L" i],
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton[tooltiptext^="L" i] { order: 12 !important; }
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton[label^="M" i],
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton[aria-label^="M" i],
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton[tooltiptext^="M" i] { order: 13 !important; }
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton[label^="N" i],
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton[aria-label^="N" i],
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton[tooltiptext^="N" i] { order: 14 !important; }
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton[label^="O" i],
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton[aria-label^="O" i],
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton[tooltiptext^="O" i] { order: 15 !important; }
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton[label^="P" i],
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton[aria-label^="P" i],
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton[tooltiptext^="P" i] { order: 16 !important; }
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton[label^="Q" i],
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton[aria-label^="Q" i],
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton[tooltiptext^="Q" i] { order: 17 !important; }
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton[label^="R" i],
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton[aria-label^="R" i],
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton[tooltiptext^="R" i] { order: 18 !important; }
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton[label^="S" i],
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton[aria-label^="S" i],
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton[tooltiptext^="S" i] { order: 19 !important; }
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton[label^="T" i],
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton[aria-label^="T" i],
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton[tooltiptext^="T" i] { order: 20 !important; }
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton[label^="U" i],
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton[aria-label^="U" i],
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton[tooltiptext^="U" i] { order: 21 !important; }
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton[label^="V" i],
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton[aria-label^="V" i],
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton[tooltiptext^="V" i] { order: 22 !important; }
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton[label^="W" i],
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton[aria-label^="W" i],
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton[tooltiptext^="W" i] { order: 23 !important; }
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton[label^="X" i],
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton[aria-label^="X" i],
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton[tooltiptext^="X" i] { order: 24 !important; }
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton[label^="Y" i],
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton[aria-label^="Y" i],
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton[tooltiptext^="Y" i] { order: 25 !important; }
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton[label^="Z" i],
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton[aria-label^="Z" i],
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton[tooltiptext^="Z" i] { order: 26 !important; }
 }
 
-/* ─── Section 6 — Compact rows ───────────────────────────────────────────── */
+/* ─── Section 7 — Compact rows ───────────────────────────────────────────── */
 
 @media (-moz-bool-pref: "mod.spaces-dropdown.compact") {
-  #zen-workspaces-button > toolbarbutton {
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton {
     min-height: 28px !important;
     padding-top: 4px !important;
     padding-bottom: 4px !important;
-    margin: 1px 6px !important;
+    margin: 1px 0 !important;
   }
-  #zen-workspaces-button > toolbarbutton .zen-workspace-sidebar-name {
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton .zen-workspace-sidebar-name {
     font-size: 12px !important;
   }
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button:hover > toolbarbutton:not([active="true"]),
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button:focus-within > toolbarbutton:not([active="true"]),
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button[reorder-mode="true"] > toolbarbutton:not([active="true"]) {
+    max-height: 48px !important;
+    min-height: 28px !important;
+    margin: 1px 0 !important;
+    padding-top: 4px !important;
+    padding-bottom: 4px !important;
+  }
   @media (-moz-bool-pref: "mod.spaces-dropdown.show-drag-handles") {
-    #zen-workspaces-button > toolbarbutton::before {
+    :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton::before {
       height: 10px;
       background-size: 3px 4px;
     }
   }
 }
 
-/* ─── Section 7 — Reduced motion ─────────────────────────────────────────── */
+/* ─── Section 8 — Reduced motion ─────────────────────────────────────────── */
 
 @media (prefers-reduced-motion: reduce) {
-  #zen-workspaces-button > toolbarbutton,
-  #zen-workspaces-button > toolbarbutton::before,
-  #zen-workspaces-button {
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button,
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton,
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton::before,
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton::after {
     transition: none !important;
   }
-  #zen-workspaces-button > toolbarbutton:not([active="true"]) {
+  :root[zen-sidebar-expanded="true"] #zen-workspaces-button > toolbarbutton:not([active="true"]) {
     transform: none !important;
   }
 }
